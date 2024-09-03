@@ -1,0 +1,62 @@
+---
+title: "TB Study Data Analysis"
+author: "Zoe Ward"
+date: "2024-08-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(gtsummary)
+library(broom)
+library(medicaldata)
+library(ggplot2)
+library(here)
+data(package = "medicaldata")
+tb <- medicaldata::strep_tb
+```
+
+```{r}
+summary_table <- tb |>
+	tbl_summary(
+		by = arm,
+		include = c(dose_strep_g, gender, baseline_condition,
+								baseline_temp, baseline_esr, baseline_cavitation,
+								strep_resistance, radiologic_6m, rad_num, improved),
+		statistic = list(all_continuous() ~ "{mean} ({sd})",
+										 all_categorical() ~ "{n} ({p}%)"),
+		digits = all_continuous() ~ 2,
+		missing_text = "Missing"
+	) |>
+	add_p()
+summary_table
+
+```
+
+
+```{r}
+# Logistic regression model example: predicting improvement based on baseline ESR and arm
+reg_model <- glm(improved ~ baseline_esr + arm, data = tb, family = binomial())
+
+# Summarize the regression model with gtsummary
+reg_summary <- reg_model|>
+	tbl_regression(
+		exponentiate = TRUE # To get odds ratios instead of log-odds
+	) |>
+	add_global_p()
+reg_summary
+```
+
+```{r}
+# Custom function to calculate the coefficient of variation
+coef_var <- function(x) {
+	return(sd(x, na.rm= TRUE) / mean(x, na.rm= TRUE ))
+}
+coef_var(tb$rad_num)
+```
+
+The coefficient of variation for baseline temperature in the sample is (`r coef_var(tb$rad_num)`)
+
+```{r}
+hist(tb$rad_num)
+```
+
